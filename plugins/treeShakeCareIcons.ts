@@ -48,7 +48,13 @@ export function treeShakeCareIcons(
   }
   // Finds all used icon names within the project's source files (`.tsx` or `.res` extensions).
   function getAllUsedIconNames() {
-    const files = globSync(path.resolve(rootDir, "{apps,src}/**/*.{tsx,ts}"));
+    // Use paths relative to the project root. Passing a Windows absolute path
+    // to glob causes its backslashes to be treated as escape characters, so no
+    // line icons are discovered and the generated icon map is empty.
+    const files = globSync(["apps/**/*.{tsx,ts}", "src/**/*.{tsx,ts}"], {
+      cwd: rootDir,
+      absolute: true,
+    });
     const usedIconsArray: string[] = [];
 
     files.forEach((file) => {

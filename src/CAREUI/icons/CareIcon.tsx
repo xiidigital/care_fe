@@ -30,16 +30,25 @@ export default function CareIcon({
 
   const isDuoTone = icon.startsWith("d-");
 
-  const [viewBox, path, fill, strokeWidth, secondaryPath] = (
+  const iconPath = (
     (isDuoTone ? duoToneIconData : iconData) as typeof iconData &
       typeof duoToneIconData
-  )[icon] as [
-    number,
-    string,
-    boolean | undefined,
-    number | undefined,
-    string | undefined,
-  ];
+  )[icon] as
+    | [
+        number,
+        string,
+        boolean | undefined,
+        number | undefined,
+        string | undefined,
+      ]
+    | undefined;
+
+  if (!iconPath) {
+    console.warn(`CareIcon: icon "${icon}" was not found.`);
+    return null;
+  }
+
+  const [viewBox, path, fill, strokeWidth, secondaryPath] = iconPath;
 
   const svgClassName = `care-svg-icon__baseline ${className || ""}`.trim();
 
