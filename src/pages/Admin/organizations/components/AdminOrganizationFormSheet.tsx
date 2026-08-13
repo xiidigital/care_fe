@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -9,6 +9,7 @@ import * as z from "zod";
 
 import CareIcon from "@/CAREUI/icons/CareIcon";
 
+import OrganizationGeographyField from "@/components/Geography/OrganizationGeographyField";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -30,6 +31,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 import mutate from "@/Utils/request/mutate";
+import query from "@/Utils/request/query";
 import {
   OrgType,
   Organization,
@@ -55,6 +57,11 @@ export default function AdminOrganizationFormSheet({
   const isRoleOrganizationPage = organizationType === OrgType.ROLE;
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const { data: parentOrganization } = useQuery({
+    queryKey: ["organization", parentId],
+    queryFn: query(organizationApi.get, { pathParams: { id: parentId || "" } }),
+    enabled: !!parentId && organizationType === OrgType.GOVT,
+  });
 
   const formSchema = z.object({
     name: z
@@ -63,6 +70,10 @@ export default function AdminOrganizationFormSheet({
       .min(1, { message: t("field_required") }),
     description: z.string().optional(),
     org_type: z.enum(OrgType),
+    country_id: z.number().int().optional(),
+    region_id: z.number().int().optional(),
+    subregion_id: z.number().int().optional(),
+    city_id: z.number().int().optional(),
   });
 
   const form = useForm({
@@ -80,12 +91,20 @@ export default function AdminOrganizationFormSheet({
         name: org.name || "",
         description: org.description || "",
         org_type: org.org_type as OrgType,
+        country_id: org.country_id,
+        region_id: org.region_id,
+        subregion_id: org.subregion_id,
+        city_id: org.city_id,
       });
     } else if (!isEditMode && open) {
       form.reset({
         name: "",
         description: "",
         org_type: organizationType as OrgType,
+        country_id: undefined,
+        region_id: undefined,
+        subregion_id: undefined,
+        city_id: undefined,
       });
     }
   }, [form, isEditMode, org, open, organizationType]);
@@ -122,17 +141,20 @@ export default function AdminOrganizationFormSheet({
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     const parentOrgId = isRoleOrganizationPage ? undefined : parentId;
-    const data = {
+    const organizationData = {
       name: values.name.trim(),
       description: values.description?.trim() || undefined,
       org_type: values.org_type,
-      parent_id: parentOrgId,
+      country_id: values.country_id,
+      region_id: values.region_id,
+      subregion_id: values.subregion_id,
+      city_id: values.city_id,
     };
 
     if (isEditMode) {
-      updateOrganization(data);
+      updateOrganization(organizationData);
     } else {
-      createOrganization(data);
+      createOrganization({ ...organizationData, parent: parentOrgId });
     }
   };
 
@@ -192,6 +214,32 @@ export default function AdminOrganizationFormSheet({
                   {t("role_organization_record_description")}
                 </p>
               </div>
+            )}
+
+            {organizationType === OrgType.GOVT && (
+              <OrganizationGeographyField
+                parent={parentOrganization}
+                value={{
+                  country_id: form.watch("country_id"),
+                  region_id: form.watch("region_id"),
+                  subregion_id: form.watch("subregion_id"),
+                  city_id: form.watch("city_id"),
+                }}
+                onChange={(geography) => {
+                  form.setValue("country_id", geography.country_id, {
+                    shouldDirty: true,
+                  });
+                  form.setValue("region_id", geography.region_id, {
+                    shouldDirty: true,
+                  });
+                  form.setValue("subregion_id", geography.subregion_id, {
+                    shouldDirty: true,
+                  });
+                  form.setValue("city_id", geography.city_id, {
+                    shouldDirty: true,
+                  });
+                }}
+              />
             )}
 
             <FormField

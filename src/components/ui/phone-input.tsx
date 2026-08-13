@@ -67,9 +67,18 @@ function PhoneInput({
   value,
   ...props
 }: React.ComponentProps<typeof RPNInput.default> & PhoneInputProps) {
+  const defaultCountry =
+    (props.defaultCountry as CountryCode | undefined) ??
+    careConfig.defaultCountry.code;
   const [country, setCountry] = React.useState<CountryCode>(
-    careConfig.defaultCountry.code,
+    defaultCountry,
   );
+
+  React.useEffect(() => {
+    if (!value) {
+      setCountry(defaultCountry);
+    }
+  }, [defaultCountry, value]);
 
   return (
     <PhoneInputContext.Provider value={{ country, setCountry }}>
@@ -85,7 +94,7 @@ function PhoneInput({
         flagComponent={FlagComponent}
         countrySelectComponent={CountrySelect}
         inputComponent={InputComponent}
-        defaultCountry={careConfig.defaultCountry.code}
+        defaultCountry={defaultCountry}
         value={value || undefined}
         smartCaret={true}
         onCountryChange={(newCountry) => {

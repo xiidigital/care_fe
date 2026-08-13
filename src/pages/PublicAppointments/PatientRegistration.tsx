@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { navigate, useNavigationPrompt, useQueryParams } from "raviger";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -21,20 +20,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-import GovtOrganizationPicker from "@/components/Organization/GovtOrganizationPicker";
+import GeographicLocationFields from "@/components/Geography/GeographicLocationFields";
 
 import { usePatientContext } from "@/hooks/usePatientUser";
 
 import { GENDERS, GENDER_TYPES } from "@/common/constants";
 import { validateName } from "@/common/validation";
 
+import { getPostalCodePresentation } from "@/Utils/postalCode";
 import { usePubSub } from "@/Utils/pubsubContext";
 import mutate from "@/Utils/request/mutate";
+import query from "@/Utils/request/query";
 import { dateQueryString } from "@/Utils/utils";
-import validators from "@/Utils/validators";
 import { PublicPatientRead } from "@/types/emr/patient/patient";
 import publicPatientApi from "@/types/emr/patient/publicPatientApi";
-import { Organization } from "@/types/organization/organization";
+import publicFacilityApi from "@/types/facility/publicFacilityApi";
 import PublicAppointmentApi from "@/types/scheduling/PublicAppointmentApi";
 import { PublicAppointment } from "@/types/scheduling/schedule";
 
@@ -57,10 +57,6 @@ export default function PublicPatientRegistration(
   const patientUserContext = usePatientContext();
   const tokenData = patientUserContext?.tokenData;
 
-  const [selectedGeoOrg, setSelectedGeoOrg] = useState<Organization | null>(
-    null,
-  );
-
   const patientSchema = z
     .object({
       name: z
@@ -71,8 +67,10 @@ export default function PublicPatientRegistration(
       address: z.string().min(1, t("field_required")),
       age: z.string().optional(),
       date_of_birth: z.date().or(z.string()).optional(),
-      pincode: validators().pincode,
-      geo_organization: z.string().min(1, t("organization_required")),
+      pincode: z.string().trim().min(1, t("field_required")),
+      region_id: z.number().optional(),
+      subregion_id: z.number().optional(),
+      city_id: z.number().optional(),
       ageInputType: z.enum(["age", "date_of_birth"]),
     })
     .superRefine((data, ctx) => {
@@ -109,6 +107,15 @@ export default function PublicPatientRegistration(
       address: "",
     },
   });
+  const { data: facility } = useQuery({
+    queryKey: ["public-facility", props.facilityId],
+    queryFn: query(publicFacilityApi.getAny, {
+      pathParams: { id: props.facilityId },
+    }),
+  });
+  const postalCode = getPostalCodePresentation(
+    facility?.geo_organization.geography?.country?.country_code,
+  );
 
   const { mutate: createAppointment, isPending: isCreatingAppointment } =
     useMutation({
@@ -165,7 +172,10 @@ export default function PublicPatientRegistration(
           : undefined,
       age: data.ageInputType === "age" ? Number(data.age) : undefined,
       pincode: data.pincode,
-      geo_organization: data.geo_organization,
+      registration_facility: props.facilityId,
+      region_id: data.region_id,
+      subregion_id: data.subregion_id,
+      city_id: data.city_id,
     };
     createPatient(formattedData);
   });
@@ -356,19 +366,16 @@ export default function PublicPatientRegistration(
                 name="pincode"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel aria-required>{t("pincode")}</FormLabel>
+                    <FormLabel aria-required>{postalCode.label}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        onChange={(e) => {
-                          const value = e.target.value
-                            ? Number(e.target.value)
-                            : undefined;
-                          field.onChange(value);
-                        }}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        type="number"
+                        placeholder={postalCode.placeholder}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        autoComplete="postal-code"
+                        pattern={postalCode.pattern}
+                        maxLength={postalCode.maxLength}
+                        type="text"
                       />
                     </FormControl>
                     <FormMessage />
@@ -376,29 +383,24 @@ export default function PublicPatientRegistration(
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="geo_organization"
-                render={({ field, fieldState }) => (
-                  <FormItem className="flex flex-col">
-                    <FormControl>
-                      <GovtOrganizationPicker
-                        ref={field.ref}
-                        aria-invalid={!!fieldState.error}
-                        required
-                        authToken={tokenData.token}
-                        value={selectedGeoOrg}
-                        onChange={(organization) => {
-                          setSelectedGeoOrg(organization);
-                          const isValid =
-                            !!organization && !organization.has_children;
-                          field.onChange(isValid ? organization.id : "");
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+              <GeographicLocationFields
+                countryId={facility?.geo_organization.geography?.country?.id}
+                value={{
+                  region_id: form.watch("region_id"),
+                  subregion_id: form.watch("subregion_id"),
+                  city_id: form.watch("city_id"),
+                }}
+                onChange={(location) => {
+                  form.setValue("region_id", location.region_id, {
+                    shouldDirty: true,
+                  });
+                  form.setValue("subregion_id", location.subregion_id, {
+                    shouldDirty: true,
+                  });
+                  form.setValue("city_id", location.city_id, {
+                    shouldDirty: true,
+                  });
+                }}
               />
             </div>
           </div>

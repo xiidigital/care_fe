@@ -62,6 +62,7 @@ const SEARCH_MODE_IDENTIFIER = "identifier" as const;
 const SEARCH_MODE_ENCOUNTER = "encounter" as const;
 const ENCOUNTER_SEARCH_PATIENT_NAME = "name" as const;
 const ENCOUNTER_SEARCH_EXTERNAL_IDENTIFIER = "external_identifier" as const;
+const PHONE_NUMBER_SEARCH_KEY = "phone_number" as const;
 
 type PatientSearchMode =
   typeof SEARCH_MODE_IDENTIFIER | typeof SEARCH_MODE_ENCOUNTER;
@@ -128,8 +129,18 @@ export default function PatientIndex({ facilityId }: { facilityId: string }) {
     queryKey: ["patient-search", facilityId, identifierSearch],
     queryFn: query.debounced(patientApi.search, {
       body: {
-        config: identifierSearch.config,
-        value: identifierSearch.value,
+        phone_number:
+          identifierSearch.config === PHONE_NUMBER_SEARCH_KEY
+            ? identifierSearch.value
+            : undefined,
+        config:
+          identifierSearch.config === PHONE_NUMBER_SEARCH_KEY
+            ? undefined
+            : identifierSearch.config,
+        value:
+          identifierSearch.config === PHONE_NUMBER_SEARCH_KEY
+            ? undefined
+            : identifierSearch.value,
         page_size: 20,
       },
     }),
@@ -241,11 +252,9 @@ export default function PatientIndex({ facilityId }: { facilityId: string }) {
       return;
     }
 
-    const phoneNumberConfig = getPhoneNumberConfig(allIdentifierConfigs);
-
-    if (qParams.phone_number && phoneNumberConfig) {
+    if (qParams.phone_number) {
       setIdentifierSearch({
-        config: phoneNumberConfig.id,
+        config: PHONE_NUMBER_SEARCH_KEY,
         value: qParams.phone_number,
       });
     }
@@ -266,7 +275,6 @@ export default function PatientIndex({ facilityId }: { facilityId: string }) {
             />
             <AddPatientButton
               facilityId={facilityId}
-              identifierConfigs={allIdentifierConfigs}
               identifierSearch={identifierSearch}
             />
           </div>
@@ -362,7 +370,6 @@ export default function PatientIndex({ facilityId }: { facilityId: string }) {
                             <AddPatientButton
                               facilityId={facilityId}
                               outline
-                              identifierConfigs={allIdentifierConfigs}
                               identifierSearch={identifierSearch}
                             />
                           </div>
@@ -683,14 +690,19 @@ const getSearchOptions = (
   searchIdentifier: { config?: string; value?: string },
   configs: PatientIdentifierConfig[],
 ) => {
-  // Phone number configs first, followed by auto-maintained configs, and then non-auto-maintained configs
+  // The patient's primary phone number is always searchable. Additional
+  // identifier configurations are optional facility customizations.
   return [
-    // Phone number configs
-    ...configs.filter(
-      ({ config }) =>
-        config.auto_maintained &&
-        config.system === careConfig.phoneNumberConfigSystem,
-    ),
+    {
+      key: PHONE_NUMBER_SEARCH_KEY,
+      type: "phone" as const,
+      placeholder: t("search_by_phone_number"),
+      value:
+        searchIdentifier.config === PHONE_NUMBER_SEARCH_KEY
+          ? (searchIdentifier.value ?? "")
+          : "",
+      display: t("phone_number"),
+    },
     // Auto-maintained configs but not phone number configs
     ...configs.filter(
       ({ config }) =>
@@ -736,19 +748,10 @@ const getEncounterSearchOptions = (
   },
 ];
 
-const getPhoneNumberConfig = (identifierConfigs: PatientIdentifierConfig[]) => {
-  return identifierConfigs.find(
-    (c) => c.config.system === careConfig.phoneNumberConfigSystem,
-  );
-};
-
 const getPhoneNumberFromIdentifierSearch = (
-  identifierConfigs: PatientIdentifierConfig[],
   identifierSearch: { config?: string; value?: string },
 ) => {
-  const phoneNumberConfig = getPhoneNumberConfig(identifierConfigs);
-
-  if (phoneNumberConfig && identifierSearch.config === phoneNumberConfig.id) {
+  if (identifierSearch.config === PHONE_NUMBER_SEARCH_KEY) {
     return identifierSearch.value;
   }
 
@@ -758,19 +761,17 @@ const getPhoneNumberFromIdentifierSearch = (
 function AddPatientButton({
   facilityId,
   outline,
-  identifierConfigs,
   identifierSearch,
 }: {
   facilityId: string;
   outline?: boolean;
-  identifierConfigs: PatientIdentifierConfig[];
   identifierSearch?: { config?: string; value?: string };
 }) {
   const { t } = useTranslation();
 
   const phoneNumber =
     identifierSearch &&
-    getPhoneNumberFromIdentifierSearch(identifierConfigs, identifierSearch);
+    getPhoneNumberFromIdentifierSearch(identifierSearch);
 
   return (
     <Button

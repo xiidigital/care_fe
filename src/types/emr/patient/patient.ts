@@ -3,6 +3,7 @@ import { TagConfig } from "@/types/emr/tagConfig/tagConfig";
 import { Organization } from "@/types/organization/organization";
 import { PatientIdentifier } from "@/types/patient/patientIdentifierConfig/patientIdentifierConfig";
 import { UserReadMinimal } from "@/types/user/user";
+import { GeographicLocation } from "@/types/geography/geography";
 
 export enum BloodGroupChoices {
   A_negative = "A_negative",
@@ -30,7 +31,7 @@ export interface PatientBase {
   emergency_phone_number?: string;
   address?: string;
   permanent_address?: string;
-  pincode?: number;
+  pincode?: string;
   deceased_datetime?: string | null;
   blood_group?: BloodGroupChoices;
   date_of_birth?: string | null;
@@ -47,6 +48,7 @@ export interface PatientListRead extends PatientBase {
 
 export interface PatientRead extends PatientListRead, Permissions {
   geo_organization?: Organization;
+  location?: GeographicLocation;
   created_by?: UserReadMinimal;
   updated_by?: UserReadMinimal;
   instance_identifiers: PatientIdentifier[];
@@ -57,6 +59,10 @@ export interface PatientRead extends PatientListRead, Permissions {
 export interface PatientUpdate extends PatientBase {
   age?: number;
   geo_organization?: string;
+  registration_facility?: string;
+  region_id?: number;
+  subregion_id?: number;
+  city_id?: number;
   identifiers: PatientIdentifierCreate[];
   extensions?: Record<string, Record<string, unknown>>;
 }
@@ -107,7 +113,7 @@ export interface PublicPatientRead {
   phone_number: string;
   emergency_phone_number: string;
   address: string;
-  pincode: number;
+  pincode: string;
   date_of_birth: string;
   year_of_birth: number;
   geo_organization: Organization;
@@ -120,6 +126,9 @@ export interface PublicPatientCreate {
   date_of_birth?: string;
   age?: number;
   address: string;
-  pincode: number;
-  geo_organization: string;
+  pincode: string;
+  registration_facility: string;
+  region_id?: number;
+  subregion_id?: number;
+  city_id?: number;
 }

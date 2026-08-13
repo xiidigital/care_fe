@@ -25,8 +25,10 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
 
 import LocationPicker from "@/components/Common/GeoLocationPicker";
+import GeographicLocationFields from "@/components/Geography/GeographicLocationFields";
 import GovtOrganizationPicker from "@/components/Organization/GovtOrganizationPicker";
 
+import { getPostalCodePresentation } from "@/Utils/postalCode";
 import mutate from "@/Utils/request/mutate";
 import query from "@/Utils/request/query";
 import validators from "@/Utils/validators";
@@ -62,8 +64,11 @@ export default function FacilityForm({
     name: z.string().trim().min(1, t("name_is_required")),
     description: z.string().trim().default(""),
     features: z.array(z.number()).default([]),
-    pincode: validators().pincode,
+    pincode: z.string().trim().min(1, t("field_required")),
     geo_organization: z.string().min(1, t("field_required")),
+    region_id: z.number().int().optional(),
+    subregion_id: z.number().int().optional(),
+    city_id: z.number().int().optional(),
     address: z.string().trim().min(1, t("address_is_required")),
     phone_number: validators().phoneNumber.required,
     latitude: validators()
@@ -84,8 +89,11 @@ export default function FacilityForm({
       name: "",
       description: "",
       features: [],
-      pincode: undefined,
+      pincode: "",
       geo_organization: organizationId || "",
+      region_id: undefined,
+      subregion_id: undefined,
+      city_id: undefined,
       address: "",
       phone_number: "",
       latitude: undefined,
@@ -108,7 +116,7 @@ export default function FacilityForm({
     }
 
     const govtOrg = org && org.org_type === "govt" ? org : null;
-    const isValid = !!govtOrg && !govtOrg.has_children;
+    const isValid = !!govtOrg;
 
     setSelectedGeoOrg(govtOrg);
     form.setValue("geo_organization", isValid ? govtOrg?.id : "");
@@ -208,8 +216,11 @@ export default function FacilityForm({
         name: facilityData.name,
         description: facilityData.description || "",
         features: facilityData.features || [],
-        pincode: facilityData.pincode || undefined,
+        pincode: facilityData.pincode || "",
         geo_organization: facilityData.geo_organization.id,
+        region_id: facilityData.location?.region?.id,
+        subregion_id: facilityData.location?.subregion?.id,
+        city_id: facilityData.location?.city?.id,
         address: facilityData.address,
         phone_number: facilityData.phone_number,
         latitude: facilityData.latitude
@@ -222,6 +233,10 @@ export default function FacilityForm({
       });
     }
   }, [facilityData, form]);
+
+  const postalCode = getPostalCodePresentation(
+    selectedGeoOrg?.geography?.country?.country_code,
+  );
 
   return (
     <Form {...form}>
@@ -337,21 +352,16 @@ export default function FacilityForm({
               name="pincode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel aria-required>{t("pincode")}</FormLabel>
+                  <FormLabel aria-required>{postalCode.label}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder={t("enter_pincode")}
-                      type="number"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={6}
+                      placeholder={postalCode.placeholder}
+                      type="text"
+                      autoComplete="postal-code"
+                      pattern={postalCode.pattern}
+                      maxLength={postalCode.maxLength}
                       {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                          ? Number(e.target.value)
-                          : undefined;
-                        field.onChange(value);
-                      }}
+                      onChange={(e) => field.onChange(e.target.value)}
                     />
                   </FormControl>
                   <FormMessage />
@@ -366,27 +376,52 @@ export default function FacilityForm({
                 <FormItem className="md:col-span-2">
                   <FormControl>
                     <div className="grid-cols-1 grid md:grid-cols-2 gap-5">
-                      <GovtOrganizationPicker
-                        ref={field.ref}
-                        aria-invalid={!!fieldState.error}
-                        required
-                        value={selectedGeoOrg}
-                        onChange={(organization) => {
-                          setSelectedGeoOrg(organization);
-                          const isValid =
-                            !!organization && !organization.has_children;
-                          form.setValue(
-                            "geo_organization",
-                            isValid ? organization.id : "",
-                            { shouldDirty: true },
-                          );
-                        }}
-                      />
+                      <div className="space-y-2">
+                        <FormLabel aria-required>
+                          Administrative jurisdiction
+                        </FormLabel>
+                        <GovtOrganizationPicker
+                          ref={field.ref}
+                          aria-invalid={!!fieldState.error}
+                          required
+                          value={selectedGeoOrg}
+                          onChange={(organization) => {
+                            setSelectedGeoOrg(organization);
+                            const isValid = !!organization;
+                            form.setValue(
+                              "geo_organization",
+                              isValid ? organization.id : "",
+                              { shouldDirty: true },
+                            );
+                          }}
+                        />
+                      </div>
                     </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            <GeographicLocationFields
+              countryId={selectedGeoOrg?.geography?.country?.id}
+              required
+              value={{
+                region_id: form.watch("region_id"),
+                subregion_id: form.watch("subregion_id"),
+                city_id: form.watch("city_id"),
+              }}
+              onChange={(location) => {
+                form.setValue("region_id", location.region_id, {
+                  shouldDirty: true,
+                });
+                form.setValue("subregion_id", location.subregion_id, {
+                  shouldDirty: true,
+                });
+                form.setValue("city_id", location.city_id, {
+                  shouldDirty: true,
+                });
+              }}
             />
           </div>
 

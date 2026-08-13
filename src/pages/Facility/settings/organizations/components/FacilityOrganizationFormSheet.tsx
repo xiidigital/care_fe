@@ -271,7 +271,7 @@ export default function FacilityOrganizationFormSheet({
                     : t("creating")
                   : isEditMode
                     ? t("update_organization")
-                    : t("create_organization")}
+                    : t("create_department_team")}
               </Button>
             </div>
           </form>

@@ -1,6 +1,7 @@
 import { t } from "i18next";
 
 import { RoleRead } from "@/types/emr/role/role";
+import { GeographyContext } from "@/types/geography/geography";
 import { UserReadMinimal } from "@/types/user/user";
 
 type org_type = "team" | "govt" | "role" | "product_supplier" | "other";
@@ -23,6 +24,11 @@ export interface OrganizationParent {
   name: string;
   description?: string;
   metadata: Metadata | null;
+  geography?: GeographyContext;
+  country_id?: number;
+  region_id?: number;
+  subregion_id?: number;
+  city_id?: number;
   org_type: org_type;
   level_cache: number;
   parent?: OrganizationParent;
@@ -32,7 +38,10 @@ export interface OrganizationUpdate {
   name?: string;
   description?: string;
   org_type?: OrgType;
-  parent_id?: string;
+  country_id?: number;
+  region_id?: number;
+  subregion_id?: number;
+  city_id?: number;
 }
 export interface Organization {
   id: string;
@@ -46,6 +55,7 @@ export interface Organization {
   created_at: string;
   updated_at: string;
   metadata: Metadata | null;
+  geography?: GeographyContext;
   permissions: string[];
   managing_organizations?: OrganizationParent[];
 }
@@ -54,7 +64,12 @@ export interface OrganizationCreate {
   name: string;
   description?: string;
   org_type: OrgType;
-  parent_id?: string;
+  /** Parent organization external ID, as required by the CARE API. */
+  parent?: string;
+  country_id?: number;
+  region_id?: number;
+  subregion_id?: number;
+  city_id?: number;
 }
 
 export interface OrganizationUserRole {

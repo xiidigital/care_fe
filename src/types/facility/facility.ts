@@ -11,6 +11,7 @@ import {
 } from "@/types/base/monetaryComponent/monetaryComponent";
 import { FacilityPermissions } from "@/types/emr/permission/permission";
 import { PrintTemplate } from "@/types/facility/printTemplate";
+import { GeographicLocation } from "@/types/geography/geography";
 import { Organization } from "@/types/organization/organization";
 import { PatientIdentifierConfig } from "@/types/patient/patientIdentifierConfig/patientIdentifierConfig";
 
@@ -28,7 +29,7 @@ export interface FacilityBase extends FacilityBareMinimum {
   latitude?: string;
   longitude?: string;
   middleware_address?: string;
-  pincode?: number;
+  pincode?: string;
 }
 
 export interface FacilityPublicRead extends FacilityBase {
@@ -44,6 +45,7 @@ export interface FacilityRead extends FacilityBase, FacilityPermissions {
   created_date?: string;
   modified_date?: string;
   geo_organization: Organization;
+  location: GeographicLocation;
   instance_discount_codes: Code[];
   instance_discount_monetary_components: MonetaryComponentRead[];
   instance_informational_codes: Code[];
@@ -71,6 +73,9 @@ export interface FacilityCreate extends Omit<FacilityBase, "id"> {
   geo_organization: string;
   features: number[];
   print_templates?: PrintTemplate[];
+  region_id?: number;
+  subregion_id?: number;
+  city_id?: number;
 }
 
 export const FACILITY_FEATURE_TYPES: {
