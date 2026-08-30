@@ -33,6 +33,9 @@
 - 🏷️ Tag `@ohcnetwork/care-fe-code-reviewers` for faster resolution.
 - 📸 Attach screenshots in the pull requests showing the changes made in the UI.
 
+For the fork's reproducible Firebase production build and controlled publishing
+procedure, see [Firebase production delivery](docs/firebase-production.md).
+
 #### Install the required dependencies
 
 ```sh
