@@ -8,7 +8,11 @@ interface Props {
 export default function Sentry({ disabled }: Props) {
   useEffect(() => {
     if (disabled) return;
-    if (!careConfig.sentry.dsn || !careConfig.sentry.environment) {
+    const { dsn, environment } = careConfig.sentry;
+
+    if (!dsn && !environment) return;
+
+    if (!dsn || !environment) {
       console.error(
         "Sentry is not configured correctly. Please check your environment variables.",
       );
@@ -16,7 +20,7 @@ export default function Sentry({ disabled }: Props) {
     }
 
     import("@sentry/browser").then((Sentry) => {
-      Sentry.init(careConfig.sentry);
+      Sentry.init({ dsn, environment });
     });
   }, [disabled]);
 

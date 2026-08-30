@@ -78,9 +78,8 @@ const careConfig = {
       ? (env.REACT_ALLOWED_ENCOUNTER_CLASSES?.split(",")[0] as EncounterClass)
       : undefined),
 
-  defaultDischargeDisposition: env.REACT_DEFAULT_DISCHARGE_DISPOSITION as
-    | EncounterDischargeDisposition
-    | undefined,
+  defaultDischargeDisposition:
+    env.REACT_DEFAULT_DISCHARGE_DISPOSITION as EncounterDischargeDisposition,
 
   mapFallbackUrlTemplate:
     env.REACT_MAPS_FALLBACK_URL_TEMPLATE ||
@@ -96,10 +95,8 @@ const careConfig = {
 
   // Plugins related configs...
   sentry: {
-    dsn:
-      env.REACT_SENTRY_DSN ||
-      "https://8801155bd0b848a09de9ebf6f387ebc8@sentry.io/5183632",
-    environment: env.REACT_SENTRY_ENVIRONMENT || "staging",
+    dsn: env.REACT_SENTRY_DSN,
+    environment: env.REACT_SENTRY_ENVIRONMENT,
   },
 
   /**
