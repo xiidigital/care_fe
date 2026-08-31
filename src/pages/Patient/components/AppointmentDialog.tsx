@@ -38,6 +38,7 @@ import {
   formatScheduleResourceName,
   PublicAppointment,
 } from "@/types/scheduling/schedule";
+import { sessionIdentityKey } from "@/Utils/auth/patientSession";
 import mutate from "@/Utils/request/mutate";
 
 function AppointmentDialog({
@@ -70,7 +71,7 @@ function AppointmentDialog({
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["appointment", tokenData?.phoneNumber],
+        queryKey: ["appointment", tokenData && sessionIdentityKey(tokenData)],
       });
       toast.success(t("appointment_cancelled"));
       setAppointmentDialogOpen(false);

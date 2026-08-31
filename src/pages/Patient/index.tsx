@@ -14,6 +14,7 @@ import { CardListSkeleton } from "@/components/Common/SkeletonLoading";
 
 import { usePatientContext } from "@/hooks/usePatientUser";
 
+import { sessionIdentityKey } from "@/Utils/auth/patientSession";
 import query from "@/Utils/request/query";
 import PublicAppointmentApi from "@/types/scheduling/PublicAppointmentApi";
 import {
@@ -41,7 +42,7 @@ function PatientPortalIndex() {
   }
 
   const { data: appointmentsData, isLoading } = useQuery({
-    queryKey: ["appointment", tokenData?.phoneNumber],
+    queryKey: ["appointment", tokenData && sessionIdentityKey(tokenData)],
     queryFn: query(PublicAppointmentApi.getAppointments, {
       headers: {
         Authorization: `Bearer ${tokenData?.token}`,

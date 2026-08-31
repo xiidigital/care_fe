@@ -27,10 +27,13 @@ import { usePatientSignOut } from "@/hooks/usePatientSignOut";
 
 import { LocalStorageKeys } from "@/common/constants";
 
-import query from "@/Utils/request/query";
 import { Organization } from "@/types/organization/organization";
 import organizationApi from "@/types/organization/organizationApi";
-import { TokenData } from "@/types/otp/otp";
+import {
+  maskedContact,
+  parsePatientSession,
+} from "@/Utils/auth/patientSession";
+import query from "@/Utils/request/query";
 
 const { customLogo, stateLogo, mainLogo } = careConfig;
 
@@ -41,13 +44,12 @@ export function LandingPage() {
   const [selectedOrganization, setSelectedOrganization] =
     useState<Organization | null>(null);
   const signOut = usePatientSignOut();
-  const tokenData: TokenData = JSON.parse(
-    localStorage.getItem(LocalStorageKeys.patientTokenKey) || "{}",
+  const tokenData = parsePatientSession(
+    localStorage.getItem(LocalStorageKeys.patientTokenKey),
   );
 
   const isLoggedIn =
-    tokenData.token &&
-    Object.keys(tokenData).length > 0 &&
+    tokenData !== null &&
     dayjs(tokenData.createdAt).isAfter(dayjs().subtract(14, "minutes"));
   const { data: organizationsResponse } = useQuery({
     queryKey: ["organizations", "level", "1"],
@@ -122,7 +124,7 @@ export function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col p-5">
       {/* Main Content  */}
-      {isLoggedIn && (
+      {isLoggedIn && tokenData && (
         <header className="w-full">
           <div className="flex justify-end items-center gap-2">
             <Button
@@ -140,7 +142,9 @@ export function LandingPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem className="text-xs text-gray-500">
-                  <span className="font-medium">{tokenData.phoneNumber}</span>
+                  <span className="font-medium">
+                    {maskedContact(tokenData)}
+                  </span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-red-600 focus:text-red-600 cursor-pointer"

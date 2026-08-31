@@ -21,6 +21,7 @@ import Loading from "@/components/Common/Loading";
 
 import { usePatientContext } from "@/hooks/usePatientUser";
 
+import { sessionIdentityKey } from "@/Utils/auth/patientSession";
 import mutate from "@/Utils/request/mutate";
 import query from "@/Utils/request/query";
 import { dateQueryString, formatName, goBack } from "@/Utils/utils";
@@ -62,7 +63,7 @@ export function ScheduleAppointment(props: AppointmentsProps) {
   }
 
   const { data: appointmentData } = useQuery({
-    queryKey: ["appointment", tokenData?.phoneNumber],
+    queryKey: ["appointment", tokenData && sessionIdentityKey(tokenData)],
     queryFn: query(PublicAppointmentApi.getAppointments, {
       headers: { Authorization: `Bearer ${tokenData?.token}` },
     }),
@@ -162,8 +163,8 @@ export function ScheduleAppointment(props: AppointmentsProps) {
         toast.success(t("appointment_created_success"));
         queryClient.invalidateQueries({
           queryKey: [
-            ["patients", tokenData.phoneNumber],
-            ["appointment", tokenData.phoneNumber],
+            ["patients", sessionIdentityKey(tokenData)],
+            ["appointment", sessionIdentityKey(tokenData)],
           ],
         });
         navigate(`/facility/${facilityId}/appointments/${data.id}/success`, {
@@ -182,7 +183,7 @@ export function ScheduleAppointment(props: AppointmentsProps) {
       onSuccess: (appointment: PublicAppointment) => {
         toast.success(t("appointment_cancelled"));
         queryClient.invalidateQueries({
-          queryKey: ["appointment", tokenData.phoneNumber],
+          queryKey: ["appointment", sessionIdentityKey(tokenData)],
         });
         createAppointment({
           note: reason,

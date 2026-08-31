@@ -27,6 +27,7 @@ import useAuthUser, { useAuthContext } from "@/hooks/useAuthUser";
 import { useCareApps } from "@/hooks/useCareApps";
 import { usePatientSignOut } from "@/hooks/usePatientSignOut";
 import { usePatientContext } from "@/hooks/usePatientUser";
+import { maskedContact } from "@/Utils/auth/patientSession";
 
 import { formatName } from "@/Utils/utils";
 
@@ -148,7 +149,12 @@ export function PatientNavUser() {
   const patientUserContext = usePatientContext();
 
   const patient = patientUserContext?.selectedPatient;
-  const phoneNumber = patientUserContext?.tokenData.phoneNumber;
+  // A patient authenticated by email link or Keycloak has no phone number, so
+  // the sidebar shows whichever contact was actually proven -- masked -- and
+  // falls back to a neutral label when the identity carries no contact at all.
+  const session = patientUserContext?.tokenData;
+  const contactLabel = session ? maskedContact(session) : "";
+  const displayName = patient?.name || contactLabel || t("patient");
 
   return (
     <SidebarMenu>
@@ -161,16 +167,13 @@ export function PatientNavUser() {
             >
               {(open || isMobile) && (
                 <>
-                  <Avatar
-                    className="size-8 rounded-lg"
-                    name={patient?.name || phoneNumber}
-                  />
+                  <Avatar className="size-8 rounded-lg" name={displayName} />
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">
-                      {patient?.name || phoneNumber}
+                      {displayName}
                     </span>
                     {patient && (
-                      <span className="truncate text-xs">{phoneNumber}</span>
+                      <span className="truncate text-xs">{contactLabel}</span>
                     )}
                   </div>
                   <CaretSortIcon className="ml-auto size-4" />
@@ -178,10 +181,7 @@ export function PatientNavUser() {
               )}
               {!open && !isMobile && (
                 <div className="flex flex-row items-center">
-                  <Avatar
-                    name={patient?.name || phoneNumber}
-                    className="size-8 rounded-lg"
-                  />
+                  <Avatar name={displayName} className="size-8 rounded-lg" />
                 </div>
               )}
             </SidebarMenuButton>
@@ -194,16 +194,11 @@ export function PatientNavUser() {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar
-                  className="size-8 rounded-lg"
-                  name={patient?.name || phoneNumber}
-                />
+                <Avatar className="size-8 rounded-lg" name={displayName} />
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">
-                    {patient?.name || phoneNumber}
-                  </span>
+                  <span className="truncate font-semibold">{displayName}</span>
                   {patient && (
-                    <span className="truncate text-xs">{phoneNumber}</span>
+                    <span className="truncate text-xs">{contactLabel}</span>
                   )}
                 </div>
               </div>

@@ -30,10 +30,13 @@ import { PhoneInput } from "@/components/ui/phone-input";
 
 import CircularProgress from "@/components/Common/CircularProgress";
 
+import PatientLoginMethods from "@/components/Auth/external/PatientLoginMethods";
+
 import { useAuthContext } from "@/hooks/useAuthUser";
 
-import { LoginByOtpResponse, TokenData } from "@/types/otp/otp";
+import { LoginByOtpResponse } from "@/types/otp/otp";
 import otpApi from "@/types/otp/otpApi";
+import { sessionFromCareToken } from "@/Utils/auth/patientSession";
 import mutate from "@/Utils/request/mutate";
 import { goBack } from "@/Utils/utils";
 
@@ -63,15 +66,13 @@ export default function PatientLogin({
   });
   const { patientLogin } = useAuthContext();
   const { patientToken: tokenData } = useAuthContext();
+  const bookingDestination = `/facility/${facilityId}/appointments/${staffId}/book-appointment`;
 
   if (
     tokenData &&
-    Object.keys(tokenData).length > 0 &&
     dayjs(tokenData.createdAt).isAfter(dayjs().subtract(14, "minutes"))
   ) {
-    navigate(
-      `/facility/${facilityId}/appointments/${staffId}/book-appointment`,
-    );
+    navigate(bookingDestination);
   }
   const { mutate: sendOTP, isPending: isSendOTPLoading } = useMutation({
     mutationFn: mutate(otpApi.send),
@@ -96,15 +97,13 @@ export default function PatientLogin({
     mutationFn: mutate(otpApi.login),
     onSuccess: (response: LoginByOtpResponse) => {
       if (response.access) {
-        const tokenData: TokenData = {
-          token: response.access,
-          phoneNumber: phoneNumber,
-          createdAt: new Date().toISOString(),
-        };
-        patientLogin(
-          tokenData,
-          `/facility/${facilityId}/appointments/${staffId}/book-appointment`,
-        );
+        const session = sessionFromCareToken(response.access, {
+          provider: "otp",
+          phoneNumber,
+        });
+        if (session) {
+          patientLogin(session, bookingDestination);
+        }
       }
     },
   });
@@ -116,39 +115,46 @@ export default function PatientLogin({
   const renderPhoneNumberForm = () => {
     return (
       <div className="mt-4 flex flex-col gap-2">
-        <span className="text-xl font-semibold">
-          {t("enter_phone_number_to_login_register")}
-        </span>
-        <form
-          onSubmit={handleSubmit}
-          className="flex mt-2 flex-col gap-4 shadow-sm border border-gray-200 p-8 rounded-lg"
-        >
-          <div className="space-y-2">
-            <Label>{t("phone_number")}</Label>
-            <PhoneInput
-              value={phoneNumber}
-              onChange={(value) => {
-                setPhoneNumber(value || "");
-                setError("");
-              }}
-              placeholder={t("enter_phone_number")}
-              disabled={isSendOTPLoading}
-            />
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-          </div>
-          <Button
-            variant="primary_gradient"
-            type="submit"
-            disabled={isSendOTPLoading}
-          >
-            <span className="bg-linear-to-b from-white/15 to-transparent"></span>
-            {isSendOTPLoading ? (
-              <CircularProgress className="text-white" />
-            ) : (
-              t("send_otp")
-            )}
-          </Button>
-        </form>
+        <PatientLoginMethods
+          destination={bookingDestination}
+          legacyOtpForm={
+            <>
+              <span className="text-xl font-semibold">
+                {t("enter_phone_number_to_login_register")}
+              </span>
+              <form
+                onSubmit={handleSubmit}
+                className="flex mt-2 flex-col gap-4 shadow-sm border border-gray-200 p-8 rounded-lg"
+              >
+                <div className="space-y-2">
+                  <Label>{t("phone_number")}</Label>
+                  <PhoneInput
+                    value={phoneNumber}
+                    onChange={(value) => {
+                      setPhoneNumber(value || "");
+                      setError("");
+                    }}
+                    placeholder={t("enter_phone_number")}
+                    disabled={isSendOTPLoading}
+                  />
+                  {error && <p className="text-red-500 text-sm">{error}</p>}
+                </div>
+                <Button
+                  variant="primary_gradient"
+                  type="submit"
+                  disabled={isSendOTPLoading}
+                >
+                  <span className="bg-linear-to-b from-white/15 to-transparent"></span>
+                  {isSendOTPLoading ? (
+                    <CircularProgress className="text-white" />
+                  ) : (
+                    t("send_otp")
+                  )}
+                </Button>
+              </form>
+            </>
+          }
+        />
       </div>
     );
   };

@@ -46,6 +46,22 @@ interface ImportMetaEnv {
   readonly REACT_MAX_FORM_DIALOG_FAVORITES?: string;
   readonly REACT_MEDICATION_VALUE_SET_SELECT_DEFAULT_TAB?: string;
 
+  // Optional external authentication (ADR-0010). All public identifiers.
+  readonly REACT_FIREBASE_AUTH_ENABLED?: string;
+  readonly REACT_FIREBASE_API_KEY?: string;
+  readonly REACT_FIREBASE_AUTH_DOMAIN?: string;
+  readonly REACT_FIREBASE_PROJECT_ID?: string;
+  readonly REACT_FIREBASE_APP_ID?: string;
+  readonly REACT_FIREBASE_SMS_COUNTRY_CODES?: string;
+  readonly REACT_FIREBASE_EMAIL_LINK_CALLBACK_URL?: string;
+  readonly REACT_KEYCLOAK_ENABLED?: string;
+  readonly REACT_KEYCLOAK_ISSUER_URL?: string;
+  readonly REACT_KEYCLOAK_WORKFORCE_CLIENT_ID?: string;
+  readonly REACT_KEYCLOAK_PATIENT_CLIENT_ID?: string;
+  readonly REACT_KEYCLOAK_WORKFORCE_REDIRECT_URI?: string;
+  readonly REACT_KEYCLOAK_PATIENT_REDIRECT_URI?: string;
+  readonly REACT_DEFAULT_COUNTRY_NAME?: string;
+
   // Plugins related envs...
   readonly REACT_SENTRY_DSN?: string;
   readonly REACT_SENTRY_ENVIRONMENT?: string;

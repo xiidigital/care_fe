@@ -1,3 +1,7 @@
+import {
+  buildFirebaseAuthConfig,
+  buildKeycloakConfig,
+} from "@/Utils/auth/externalAuthConfig";
 import { booleanFromString } from "@/common/utils";
 import { PaymentReconciliationPaymentMethod } from "@/types/billing/paymentReconciliation/paymentReconciliation";
 import {
@@ -92,6 +96,22 @@ const careConfig = {
       ? parseInt(env.REACT_JWT_TOKEN_REFRESH_INTERVAL)
       : 5 * 60e3,
   },
+
+  /**
+   * Optional patient login through Firebase (ADR-0010). Disabled by default.
+   * Only public Firebase web configuration appears here; the backend verifies
+   * the resulting ID token against Google's public certificates and needs no
+   * Firebase credential of its own.
+   */
+  firebaseAuth: buildFirebaseAuthConfig(env),
+
+  /**
+   * Optional Keycloak login (ADR-0010). Dormant by default: with the flag off,
+   * no Keycloak choice is rendered and no Keycloak route is called. Client IDs
+   * are public identifiers; client secrets are backend-only and never appear
+   * in a frontend bundle.
+   */
+  keycloak: buildKeycloakConfig(env),
 
   // Plugins related configs...
   sentry: {

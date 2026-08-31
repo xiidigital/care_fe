@@ -8,6 +8,8 @@ import BrowserWarning from "@/components/ErrorPages/BrowserWarning";
 import InvalidReset from "@/components/ErrorPages/InvalidReset";
 import SessionExpired from "@/components/ErrorPages/SessionExpired";
 
+import FirebaseEmailLinkCallback from "@/pages/Auth/FirebaseEmailLinkCallback";
+import KeycloakCallback from "@/pages/Auth/KeycloakCallback";
 import { FacilitiesPage } from "@/pages/Facility/FacilitiesPage";
 import { FacilityDetailsPage } from "@/pages/Facility/FacilityDetailsPage";
 import { LandingPage } from "@/pages/Landing/LandingPage";
@@ -44,6 +46,19 @@ export const routes = {
       <PatientLogin facilityId={facilityId} staffId={staffId} page={page} />
     ),
   "/login": () => <Login />,
+
+  // ADR-0010 callbacks. They are registered unconditionally so a link that
+  // arrives while the provider is off lands on a real page and fails closed
+  // with a generic message, rather than falling through to the login form with
+  // the provider response still in the address bar. Each callback refuses to
+  // do anything without a matching, unexpired, single-use local transaction.
+  "/auth/keycloak/workforce/callback": () => (
+    <KeycloakCallback principal="workforce" />
+  ),
+  "/auth/keycloak/patient/callback": () => (
+    <KeycloakCallback principal="patient" />
+  ),
+  "/auth/firebase/email-callback": () => <FirebaseEmailLinkCallback />,
   "/2fa": () => <Authenticate />,
   "/forgot-password": () => <Login forgot={true} />,
   "/password_reset/:token": ({ token }: { token: string }) => (

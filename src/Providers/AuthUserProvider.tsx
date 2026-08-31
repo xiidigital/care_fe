@@ -10,6 +10,7 @@ import { AuthUserContext } from "@/hooks/useAuthUser";
 
 import { LocalStorageKeys } from "@/common/constants";
 
+import { parsePatientSession } from "@/Utils/auth/patientSession";
 import mutate from "@/Utils/request/mutate";
 import query from "@/Utils/request/query";
 import { userAtom } from "@/atoms/user-atom";
@@ -48,11 +49,17 @@ export default function AuthUserProvider({
     localStorage.getItem(LocalStorageKeys.accessToken),
   );
   const path = usePath();
-  const [patientToken, setPatientToken] = useState<TokenData | null>(
-    JSON.parse(
-      localStorage.getItem(LocalStorageKeys.patientTokenKey) || "null",
-    ),
-  );
+  // A stored session written by any earlier build is migrated on read, and one
+  // that cannot be understood is dropped rather than half-restored -- see
+  // `@/Utils/auth/patientSession`.
+  const [patientToken, setPatientToken] = useState<TokenData | null>(() => {
+    const stored = localStorage.getItem(LocalStorageKeys.patientTokenKey);
+    const session = parsePatientSession(stored);
+    if (stored && !session) {
+      localStorage.removeItem(LocalStorageKeys.patientTokenKey);
+    }
+    return session;
+  });
 
   const { data: user, isLoading } = useQuery({
     queryKey: ["currentUser", accessToken],
@@ -145,6 +152,24 @@ export default function AuthUserProvider({
     navigate(redirectUrl);
   };
 
+  /**
+   * Store a CARE access/refresh pair obtained through the Keycloak workforce
+   * exchange. The pair is the existing CARE staff credential, so it enters the
+   * same session lifecycle as a password login and loads the same
+   * current-user authorization state. No Keycloak token is retained.
+   */
+  const workforceSessionLogin = async (
+    tokens: JwtTokenObtainPair,
+    redirectUrl: string,
+  ) => {
+    setAccessToken(tokens.access);
+    localStorage.setItem(LocalStorageKeys.accessToken, tokens.access);
+    localStorage.setItem(LocalStorageKeys.refreshToken, tokens.refresh);
+    await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+    queryClient.invalidateQueries({ queryKey: ["enabled-plugins"] });
+    navigate(redirectUrl);
+  };
+
   const signOut = useCallback(async () => {
     const accessToken = localStorage.getItem(LocalStorageKeys.accessToken);
     const refreshToken = localStorage.getItem(LocalStorageKeys.refreshToken);
@@ -210,6 +235,7 @@ export default function AuthUserProvider({
         user,
         patientLogin,
         patientToken,
+        workforceSessionLogin,
       }}
     >
       {user ? children : patientToken?.token ? otpAuthorized : unauthorized}

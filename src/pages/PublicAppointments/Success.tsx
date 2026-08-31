@@ -9,6 +9,7 @@ import Loading from "@/components/Common/Loading";
 
 import { usePatientContext } from "@/hooks/usePatientUser";
 
+import { sessionIdentityKey } from "@/Utils/auth/patientSession";
 import query from "@/Utils/request/query";
 import { formatName } from "@/Utils/utils";
 import PublicAppointmentApi from "@/types/scheduling/PublicAppointmentApi";
@@ -24,7 +25,7 @@ export function AppointmentSuccess(props: { appointmentId: string }) {
   const userData = getUserFromLocalStorage();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["appointment", tokenData.phoneNumber],
+    queryKey: ["appointment", sessionIdentityKey(tokenData)],
     queryFn: query(PublicAppointmentApi.getAppointments, {
       headers: {
         Authorization: `Bearer ${tokenData.token}`,

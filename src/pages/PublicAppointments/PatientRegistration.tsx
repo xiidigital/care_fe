@@ -27,6 +27,7 @@ import { usePatientContext } from "@/hooks/usePatientUser";
 import { GENDERS, GENDER_TYPES } from "@/common/constants";
 import { validateName } from "@/common/validation";
 
+import { maskedContact, sessionIdentityKey } from "@/Utils/auth/patientSession";
 import { getPostalCodePresentation } from "@/Utils/postalCode";
 import { usePubSub } from "@/Utils/pubsubContext";
 import mutate from "@/Utils/request/mutate";
@@ -129,8 +130,8 @@ export default function PublicPatientRegistration(
         toast.success(t("appointment_created_success"));
         queryClient.invalidateQueries({
           queryKey: [
-            ["patients", tokenData.phoneNumber],
-            ["appointment", tokenData.phoneNumber],
+            ["patients", sessionIdentityKey(tokenData)],
+            ["appointment", sessionIdentityKey(tokenData)],
           ],
         });
         navigate(
@@ -214,8 +215,8 @@ export default function PublicPatientRegistration(
 
             <div className="mt-4 space-y-6 flex flex-col bg-white border border-gray-200/50 rounded-md p-8 shadow-md">
               <span className="inline-block bg-primary-100 p-4 rounded-md w-full mb-4 text-primary-600 text-sm">
-                {t("phone_number_verified")}:{" "}
-                <span className="font-bold">{tokenData.phoneNumber}</span>
+                {t("contact_verified")}:{" "}
+                <span className="font-bold">{maskedContact(tokenData)}</span>
               </span>
 
               <FormField

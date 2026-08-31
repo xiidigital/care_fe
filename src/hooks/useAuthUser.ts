@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react";
 
 import {
+  JwtTokenObtainPair,
   LoginRequest,
   LoginResponse,
   MfaLoginRequest,
@@ -17,6 +18,11 @@ export interface AuthContextType {
   signOut: () => Promise<void>;
   patientLogin: (tokenData: TokenData, redirectUrl: string) => void;
   patientToken: TokenData | null;
+  /** Adopt a CARE token pair obtained outside the password form (ADR-0010). */
+  workforceSessionLogin: (
+    tokens: JwtTokenObtainPair,
+    redirectUrl: string,
+  ) => Promise<void>;
 }
 
 export const AuthUserContext = createContext<AuthContextType | null>(null);
