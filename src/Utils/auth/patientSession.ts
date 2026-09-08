@@ -2,7 +2,7 @@
  * The patient session, generalized past the phone-only assumption (ADR-0010).
  *
  * A patient token used to imply a verified phone number, and the stored session
- * recorded it as a required field. Firebase email-link and Keycloak patients
+ * recorded it as a required field. Firebase email-link and OIDC patients
  * have no phone number at all, so the session now records *which* identity was
  * proven and displays whatever is actually known.
  *
@@ -11,7 +11,7 @@
  * corrupt entry logs the patient out instead of half-authenticating them.
  */
 
-export type PatientAuthProvider = "otp" | "firebase" | "keycloak";
+export type PatientAuthProvider = "otp" | "firebase" | "oidc";
 
 export interface PatientSession {
   token: string;
@@ -21,15 +21,11 @@ export interface PatientSession {
   phoneNumber?: string;
   /** Present for Firebase email-link identities only. */
   email?: string;
-  /** Present for Keycloak identities, which resolve to one exact patient. */
+  /** Present for OIDC identities, which resolve to one exact patient. */
   patientId?: string;
 }
 
-const PROVIDERS: readonly PatientAuthProvider[] = [
-  "otp",
-  "firebase",
-  "keycloak",
-];
+const PROVIDERS: readonly PatientAuthProvider[] = ["otp", "firebase", "oidc"];
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
@@ -99,7 +95,7 @@ export function maskedContact(session: PatientSession): string {
 
 /**
  * The cache key that used to be the phone number. Keying on the phone number
- * meant an email or Keycloak patient shared one cache bucket with every other
+ * meant an email or OIDC patient shared one cache bucket with every other
  * such patient.
  */
 export function sessionIdentityKey(session: PatientSession): string {
@@ -113,7 +109,7 @@ export function sessionIdentityKey(session: PatientSession): string {
  *
  * This is *not* a security decision. The token is verified by the backend on
  * every request; decoding it here only tells the UI which identity CARE
- * actually granted, so a Keycloak or email session can be labelled and cached
+ * actually granted, so an OIDC or email session can be labelled and cached
  * correctly instead of being given a fabricated phone number. Nothing read here
  * is ever trusted for authorization.
  */

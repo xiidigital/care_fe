@@ -13,6 +13,7 @@ import { developerModeAtom } from "@/atoms/developerMode";
 
 import LanguageSelector from "@/components/Common/LanguageSelector";
 import UserColumns, { userChildProps } from "@/components/Common/UserColumns";
+import { LinkedIdentities } from "@/components/Users/LinkedIdentities";
 import ServiceTokenSection from "@/components/Users/ServiceTokenSection";
 import { TwoFactorAuth } from "@/components/Users/TwoFactorAuth";
 import UserAvatar from "@/components/Users/UserAvatar";
@@ -189,6 +190,12 @@ export default function UserSummaryTab({
               heading={t("two_factor_authentication")}
               note={t("two_factor_authentication_note")}
               Child={TwoFactorAuth}
+              childProps={userColumnsData}
+            />
+            <UserColumns
+              heading={t("linked_login_providers")}
+              note={t("link_a_provider")}
+              Child={LinkedIdentities}
               childProps={userColumnsData}
             />
             <UserColumns

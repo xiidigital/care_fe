@@ -46,14 +46,22 @@ beforeEach(() => {
 });
 
 const ORIGIN = "https://care.example";
-const REDIRECT = "https://care.example/auth/keycloak/patient/callback";
+const REDIRECT = "https://care.example/auth/oidc/patient/callback";
+const AUTHORIZE =
+  "https://identity.example/realms/care/protocol/openid-connect/auth";
+
+const PROVIDER = {
+  id: "patient-sso",
+  client_id: "care-patient",
+  scopes: ["openid", "profile"],
+  authorization_endpoint: AUTHORIZE,
+  redirect_uri: REDIRECT,
+  principal_type: "patient" as const,
+};
 
 const start = () =>
   startAuthorization({
-    issuerUrl: "https://identity.example/realms/care",
-    clientId: "care-patient",
-    redirectUri: REDIRECT,
-    principal: "patient",
+    provider: PROVIDER,
     destination: "/patient/home",
     crypto,
     now: () => 1_000,
@@ -110,6 +118,7 @@ test("the authorization request asks for S256 and carries state and nonce", asyn
 
   assert.equal(url.origin, "https://identity.example");
   assert.equal(url.pathname, "/realms/care/protocol/openid-connect/auth");
+  assert.equal(url.searchParams.get("scope"), "openid profile");
   assert.equal(url.searchParams.get("response_type"), "code");
   assert.equal(url.searchParams.get("client_id"), "care-patient");
   assert.equal(url.searchParams.get("redirect_uri"), REDIRECT);
@@ -124,17 +133,95 @@ test("the verifier never leaves the browser in the authorization request", async
   assert.equal(authorizationUrl.includes(transaction.codeVerifier), false);
 });
 
-test("a trailing slash on the issuer does not double up", () => {
-  const url = buildAuthorizationUrl({
-    issuerUrl: "https://identity.example/realms/care/",
-    clientId: "c",
-    redirectUri: REDIRECT,
+test("the authorization endpoint is used verbatim, never composed", () => {
+  // Keycloak's path is not Entra ID's. Only the issuer knows which it is, and
+  // hardcoding one would make CARE a single-vendor client (ADR-0011 §2).
+  const url = new URL(
+    buildAuthorizationUrl({
+      authorizationEndpoint:
+        "https://login.microsoftonline.com/t/oauth2/v2.0/authorize",
+      clientId: "c",
+      redirectUri: REDIRECT,
+      scopes: ["openid"],
+      state: "s",
+      nonce: "n",
+      codeChallenge: "c",
+    }),
+  );
+
+  assert.equal(url.origin, "https://login.microsoftonline.com");
+  assert.equal(url.pathname, "/t/oauth2/v2.0/authorize");
+});
+
+test("an authorization endpoint cannot smuggle its own query parameters", () => {
+  const url = new URL(
+    buildAuthorizationUrl({
+      authorizationEndpoint:
+        "https://identity.example/authorize?prompt=none&client_id=other",
+      clientId: "care-patient",
+      redirectUri: REDIRECT,
+      scopes: ["openid"],
+      state: "s",
+      nonce: "n",
+      codeChallenge: "c",
+    }),
+  );
+
+  assert.equal(url.searchParams.get("client_id"), "care-patient");
+  assert.equal(url.searchParams.get("prompt"), null);
+});
+
+test("the started transaction records which provider began it", async () => {
+  const { transaction } = await start();
+
+  assert.equal(transaction.providerId, "patient-sso");
+});
+
+test("a transaction is a login unless it says otherwise", async () => {
+  const { transaction } = await start();
+
+  assert.equal(transaction.intent, "login");
+});
+
+test("a link transaction survives the round trip as a link", async () => {
+  // Login and link share a callback URL. If the intent did not travel with the
+  // transaction, a link attempt would be exchanged as a login and fail for a
+  // subject that is not linked yet -- which is the whole point of linking it.
+  const { transaction } = await startAuthorization({
+    provider: PROVIDER,
+    destination: "/patient/home",
+    intent: "link",
+    crypto,
+    now: () => 1_000,
+  });
+  saveTransaction(transaction, storage);
+
+  assert.equal(takeTransaction(storage)?.intent, "link");
+});
+
+test("a stored transaction with an unknown intent is discarded", () => {
+  const stored = {
     state: "s",
     nonce: "n",
-    codeChallenge: "c",
-  });
+    codeVerifier: "v",
+    redirectUri: REDIRECT,
+    principal: "patient",
+    providerId: "patient-sso",
+    destination: "/patient/home",
+    createdAt: 1_000,
+  };
+  storage.setItem(
+    "care_oidc_transaction",
+    JSON.stringify({ ...stored, intent: "escalate" }),
+  );
 
-  assert.equal(url.includes("//protocol"), false);
+  assert.equal(takeTransaction(storage), null);
+
+  storage.setItem(
+    "care_oidc_transaction",
+    JSON.stringify({ ...stored, intent: "link" }),
+  );
+  assert.equal(takeTransaction(storage)?.intent, "link");
 });
 
 // ---------------------------------------------------------------------------

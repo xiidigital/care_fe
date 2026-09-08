@@ -1,5 +1,5 @@
 /**
- * Browser side of the Keycloak Authorization Code + PKCE flow (ADR-0010 §6).
+ * Browser side of the Authorization Code + PKCE flow (ADR-0011 §6).
  *
  * Everything here is short-lived, single-use transaction material. It is kept
  * in `sessionStorage` — not `localStorage` — so it dies with the tab, and it is
@@ -7,14 +7,25 @@
  * is ever logged.
  */
 
-export type KeycloakPrincipal = "workforce" | "patient";
+export type OidcPrincipal = "workforce" | "patient";
+
+/**
+ * Why this round trip was started. Login and link share a callback URL --
+ * the provider only knows one redirect URI per principal -- so the intent has
+ * to travel with the transaction. Without it a link attempt would be exchanged
+ * as a login and fail for a subject that is, by definition, not linked yet.
+ */
+export type OidcIntent = "login" | "link";
 
 export interface OidcTransaction {
   state: string;
   nonce: string;
   codeVerifier: string;
   redirectUri: string;
-  principal: KeycloakPrincipal;
+  principal: OidcPrincipal;
+  /** Which provider started this. The callback must not switch providers. */
+  providerId: string;
+  intent: OidcIntent;
   /** Same-origin path to land on after a successful exchange. */
   destination: string;
   createdAt: number;
@@ -88,22 +99,32 @@ export function safeDestination(
   }
 }
 
+/**
+ * The authorization endpoint is taken from the issuer's discovery document,
+ * relayed by CARE. It is never composed here: Keycloak's
+ * `/protocol/openid-connect/auth` is not Entra ID's `/oauth2/v2.0/authorize`,
+ * and a hardcoded path would silently make CARE a single-vendor client
+ * (ADR-0011 §2).
+ */
 export function buildAuthorizationUrl(params: {
-  issuerUrl: string;
+  authorizationEndpoint: string;
   clientId: string;
   redirectUri: string;
+  scopes: string[];
   state: string;
   nonce: string;
   codeChallenge: string;
 }): string {
-  const url = new URL(
-    `${params.issuerUrl.replace(/\/$/, "")}/protocol/openid-connect/auth`,
-  );
+  const url = new URL(params.authorizationEndpoint);
+  const scope = params.scopes.length ? params.scopes.join(" ") : "openid";
+  // Assigned rather than appended: an authorization endpoint that arrived with
+  // its own query string must not be able to smuggle parameters into the
+  // request CARE is making.
   url.search = new URLSearchParams({
     response_type: "code",
     client_id: params.clientId,
     redirect_uri: params.redirectUri,
-    scope: "openid",
+    scope,
     state: params.state,
     nonce: params.nonce,
     code_challenge: params.codeChallenge,
@@ -113,31 +134,39 @@ export function buildAuthorizationUrl(params: {
 }
 
 export async function startAuthorization(options: {
-  issuerUrl: string;
-  clientId: string;
-  redirectUri: string;
-  principal: KeycloakPrincipal;
+  provider: {
+    id: string;
+    client_id: string;
+    scopes: string[];
+    authorization_endpoint: string;
+    redirect_uri: string;
+    principal_type: OidcPrincipal;
+  };
   destination: string;
+  intent?: OidcIntent;
   crypto: Crypto;
   now?: () => number;
 }): Promise<StartedAuthorization> {
-  const { crypto } = options;
+  const { crypto, provider } = options;
   const codeVerifier = createCodeVerifier(crypto);
   const transaction: OidcTransaction = {
     state: createState(crypto),
     nonce: createNonce(crypto),
     codeVerifier,
-    redirectUri: options.redirectUri,
-    principal: options.principal,
+    redirectUri: provider.redirect_uri,
+    principal: provider.principal_type,
+    providerId: provider.id,
+    intent: options.intent ?? "login",
     destination: options.destination,
     createdAt: (options.now ?? Date.now)(),
   };
 
   return {
     authorizationUrl: buildAuthorizationUrl({
-      issuerUrl: options.issuerUrl,
-      clientId: options.clientId,
-      redirectUri: options.redirectUri,
+      authorizationEndpoint: provider.authorization_endpoint,
+      clientId: provider.client_id,
+      redirectUri: provider.redirect_uri,
+      scopes: provider.scopes,
       state: transaction.state,
       nonce: transaction.nonce,
       codeChallenge: await createCodeChallenge(codeVerifier, crypto),
@@ -167,6 +196,8 @@ export function takeTransaction(storage: Storage): OidcTransaction | null {
       typeof parsed.codeVerifier === "string" &&
       typeof parsed.redirectUri === "string" &&
       typeof parsed.destination === "string" &&
+      typeof parsed.providerId === "string" &&
+      (parsed.intent === "login" || parsed.intent === "link") &&
       typeof parsed.createdAt === "number" &&
       (parsed.principal === "workforce" || parsed.principal === "patient");
     return isComplete ? (parsed as OidcTransaction) : null;
@@ -193,7 +224,7 @@ export type CallbackResolution =
  */
 export function resolveCallback(options: {
   search: string;
-  principal: KeycloakPrincipal;
+  principal: OidcPrincipal;
   storage: Storage;
   now?: () => number;
 }): CallbackResolution {

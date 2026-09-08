@@ -4,7 +4,7 @@ import { PatientSession } from "@/Utils/auth/patientSession";
  * A patient session (ADR-0010).
  *
  * `phoneNumber` was required when phone OTP was the only way in. Firebase
- * email-link and Keycloak patients have no phone number, so exactly one of
+ * email-link and OIDC patients have no phone number, so exactly one of
  * `phoneNumber`, `email` and `patientId` identifies the session instead.
  *
  * Parsing, migration of pre-ADR-0010 sessions and display masking live in

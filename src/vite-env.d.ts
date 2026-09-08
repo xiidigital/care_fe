@@ -54,12 +54,6 @@ interface ImportMetaEnv {
   readonly REACT_FIREBASE_APP_ID?: string;
   readonly REACT_FIREBASE_SMS_COUNTRY_CODES?: string;
   readonly REACT_FIREBASE_EMAIL_LINK_CALLBACK_URL?: string;
-  readonly REACT_KEYCLOAK_ENABLED?: string;
-  readonly REACT_KEYCLOAK_ISSUER_URL?: string;
-  readonly REACT_KEYCLOAK_WORKFORCE_CLIENT_ID?: string;
-  readonly REACT_KEYCLOAK_PATIENT_CLIENT_ID?: string;
-  readonly REACT_KEYCLOAK_WORKFORCE_REDIRECT_URI?: string;
-  readonly REACT_KEYCLOAK_PATIENT_REDIRECT_URI?: string;
   readonly REACT_DEFAULT_COUNTRY_NAME?: string;
 
   // Plugins related envs...

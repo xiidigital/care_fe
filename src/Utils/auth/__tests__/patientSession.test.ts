@@ -64,18 +64,18 @@ test("an email session needs no phone number", () => {
   assert.equal(session?.provider, "firebase");
 });
 
-test("a keycloak session identifies one exact patient", () => {
+test("an oidc session identifies one exact patient", () => {
   const session = parsePatientSession(
     stored({
       token: "t",
       patientId: "550e8400-e29b-41d4-a716-446655440000",
       createdAt: CREATED_AT,
-      provider: "keycloak",
+      provider: "oidc",
     }),
   );
 
   assert.equal(session?.patientId, "550e8400-e29b-41d4-a716-446655440000");
-  assert.equal(session?.provider, "keycloak");
+  assert.equal(session?.provider, "oidc");
 });
 
 // ---------------------------------------------------------------------------
@@ -159,13 +159,13 @@ test("an email local part is masked but its domain stays legible", () => {
   assert.equal(masked.startsWith("p"), true);
 });
 
-test("a keycloak session displays no contact at all", () => {
+test("an oidc session displays no contact at all", () => {
   const session = parsePatientSession(
     stored({
       token: "t",
       patientId: "abc",
       createdAt: CREATED_AT,
-      provider: "keycloak",
+      provider: "oidc",
     }),
   )!;
 

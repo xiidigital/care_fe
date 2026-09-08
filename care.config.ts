@@ -1,7 +1,4 @@
-import {
-  buildFirebaseAuthConfig,
-  buildKeycloakConfig,
-} from "@/Utils/auth/externalAuthConfig";
+import { buildFirebaseAuthConfig } from "@/Utils/auth/externalAuthConfig";
 import { booleanFromString } from "@/common/utils";
 import { PaymentReconciliationPaymentMethod } from "@/types/billing/paymentReconciliation/paymentReconciliation";
 import {
@@ -105,13 +102,10 @@ const careConfig = {
    */
   firebaseAuth: buildFirebaseAuthConfig(env),
 
-  /**
-   * Optional Keycloak login (ADR-0010). Dormant by default: with the flag off,
-   * no Keycloak choice is rendered and no Keycloak route is called. Client IDs
-   * are public identifiers; client secrets are backend-only and never appear
-   * in a frontend bundle.
-   */
-  keycloak: buildKeycloakConfig(env),
+  // OIDC providers are deliberately absent from build configuration
+  // (ADR-0011 §6). They are described by the backend at runtime, because a
+  // build that declared its own could advertise a method the backend does
+  // not have. See `@/Utils/auth/useOidcProviders`.
 
   // Plugins related configs...
   sentry: {

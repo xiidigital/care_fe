@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 import FirebaseEmailLinkLogin from "@/components/Auth/external/FirebaseEmailLinkLogin";
 import FirebaseSmsLogin from "@/components/Auth/external/FirebaseSmsLogin";
-import { useKeycloakRedirect } from "@/components/Auth/external/useKeycloakRedirect";
+import { useOidcRedirect } from "@/components/Auth/external/useOidcRedirect";
 
 import { useAuthContext } from "@/hooks/useAuthUser";
 
@@ -15,6 +15,8 @@ import {
   PatientLoginMethod,
   availablePatientLoginMethods,
 } from "@/Utils/auth/loginMethods";
+import { useOidcProviders } from "@/Utils/auth/useOidcProviders";
+import { OidcProviderDescription } from "@/types/auth/externalAuthApi";
 import { TokenData } from "@/types/otp/otp";
 
 interface Props {
@@ -26,12 +28,16 @@ interface Props {
 }
 
 /**
- * The patient entry point (ADR-0010 §3).
+ * The patient entry point (ADR-0011 §6).
  *
- * `Use another login method` is Keycloak and appears only when Keycloak is
- * enabled. It deliberately does not name or predict the mechanism configured
- * inside Keycloak — password, OTP, passkey and federation are all the same
- * choice from here.
+ * Each configured provider appears under the name its operator gave it. That
+ * name is the only thing a patient is told about it: what the provider does
+ * internally — password, OTP, passkey, federation — is the provider's
+ * business, and CARE neither knows nor renders it.
+ *
+ * `display_name` is operator-supplied text, rendered as text. React escapes
+ * it, nothing interpolates it into markup, and the authorization URL is built
+ * from the provider's own endpoint rather than from anything shown here.
  */
 export default function PatientLoginMethods({
   destination,
@@ -41,20 +47,21 @@ export default function PatientLoginMethods({
   const { t } = useTranslation();
   const { patientLogin } = useAuthContext();
   const [selected, setSelected] = useState<PatientLoginMethod | null>(null);
+  const { providers } = useOidcProviders();
 
   const { methods, hasChoice } = availablePatientLoginMethods({
     firebase: careConfig.firebaseAuth,
-    keycloak: careConfig.keycloak,
+    providers,
     legacyOtpEnabled,
   });
-  const keycloak = useKeycloakRedirect("patient");
+  const { redirect, redirectingTo } = useOidcRedirect();
 
   const onAuthenticated = (session: TokenData) =>
     patientLogin(session, destination);
 
-  const startKeycloak = async () => {
+  const startProvider = async (provider: OidcProviderDescription) => {
     try {
-      await keycloak.redirect(destination);
+      await redirect(provider, destination);
     } catch {
       toast.error(t("external_login_failed"));
     }
@@ -63,15 +70,15 @@ export default function PatientLoginMethods({
   // Only the legacy path is configured: keep the current form exactly as it is.
   if (
     methods.length === 0 ||
-    (methods.length === 1 && methods[0] === "legacy_otp")
+    (methods.length === 1 && methods[0].kind === "legacy_otp")
   ) {
     return <>{legacyOtpForm}</>;
   }
 
   const active = selected ?? (hasChoice ? null : methods[0]);
 
-  if (active === "legacy_otp") return <>{legacyOtpForm}</>;
-  if (active === "sms") {
+  if (active?.kind === "legacy_otp") return <>{legacyOtpForm}</>;
+  if (active?.kind === "sms") {
     return (
       <FirebaseSmsLogin
         onAuthenticated={onAuthenticated}
@@ -79,7 +86,7 @@ export default function PatientLoginMethods({
       />
     );
   }
-  if (active === "email") {
+  if (active?.kind === "email") {
     return (
       <FirebaseEmailLinkLogin
         onBack={hasChoice ? () => setSelected(null) : undefined}
@@ -97,47 +104,64 @@ export default function PatientLoginMethods({
         role="group"
         aria-labelledby="patient-login-methods-label"
       >
-        {methods.includes("sms") && (
-          <Button
-            type="button"
-            variant="primary"
-            className="w-full"
-            onClick={() => setSelected("sms")}
-          >
-            {t("continue_by_sms")}
-          </Button>
-        )}
-        {methods.includes("email") && (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => setSelected("email")}
-          >
-            {t("continue_by_email")}
-          </Button>
-        )}
-        {methods.includes("keycloak") && (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            disabled={keycloak.isRedirecting}
-            onClick={() => void startKeycloak()}
-          >
-            {t("use_another_login_method")}
-          </Button>
-        )}
-        {methods.includes("legacy_otp") && (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => setSelected("legacy_otp")}
-          >
-            {t("continue_with_care_code")}
-          </Button>
-        )}
+        {methods.map((method) => {
+          if (method.kind === "sms") {
+            return (
+              <Button
+                key="sms"
+                type="button"
+                variant="primary"
+                className="w-full"
+                onClick={() => setSelected(method)}
+              >
+                {t("continue_by_sms")}
+              </Button>
+            );
+          }
+          if (method.kind === "email") {
+            return (
+              <Button
+                key="email"
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => setSelected(method)}
+              >
+                {t("continue_by_email")}
+              </Button>
+            );
+          }
+          if (method.kind === "oidc" && method.provider) {
+            const provider = method.provider;
+            return (
+              <Button
+                key={provider.id}
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={redirectingTo !== null}
+                onClick={() => void startProvider(provider)}
+              >
+                {redirectingTo === provider.id
+                  ? t("redirecting")
+                  : t("continue_with_provider", {
+                      provider: provider.display_name,
+                    })}
+              </Button>
+            );
+          }
+          return (
+            <Button
+              key="legacy_otp"
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => setSelected(method)}
+            >
+              {t("continue_with_care_code")}
+            </Button>
+          );
+        })}
       </div>
     </div>
   );

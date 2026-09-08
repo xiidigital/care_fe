@@ -9,10 +9,7 @@ import Loading from "@/components/Common/Loading";
 
 import { useAuthContext } from "@/hooks/useAuthUser";
 
-import {
-  KeycloakPrincipal,
-  resolveCallback,
-} from "@/Utils/auth/oidcTransaction";
+import { OidcPrincipal, resolveCallback } from "@/Utils/auth/oidcTransaction";
 import { sessionFromCareToken } from "@/Utils/auth/patientSession";
 import mutate from "@/Utils/request/mutate";
 import { JwtTokenObtainPair } from "@/types/auth/auth";
@@ -20,28 +17,31 @@ import externalAuthApi from "@/types/auth/externalAuthApi";
 import { LoginByOtpResponse } from "@/types/otp/otp";
 
 interface Props {
-  principal: KeycloakPrincipal;
+  principal: OidcPrincipal;
 }
 
 /**
- * Complete a Keycloak login (ADR-0010 §6).
+ * Complete an OIDC login (ADR-0011 §6).
  *
  * State is verified against this tab's stored transaction *before* anything is
  * sent to CARE, and the transaction is consumed whether the callback succeeds
  * or fails. The authorization code, verifier and nonce are never logged, and
  * the response parameters are removed from the address bar immediately.
  */
-export default function KeycloakCallback({ principal }: Props) {
+export default function OidcCallback({ principal }: Props) {
   const { t } = useTranslation();
   const { patientLogin, workforceSessionLogin } = useAuthContext();
   const [failed, setFailed] = useState(false);
   const hasRun = useRef(false);
 
   const { mutateAsync: exchangeWorkforce } = useMutation({
-    mutationFn: mutate(externalAuthApi.keycloakWorkforceExchange),
+    mutationFn: mutate(externalAuthApi.oidcWorkforceExchange),
   });
   const { mutateAsync: exchangePatient } = useMutation({
-    mutationFn: mutate(externalAuthApi.keycloakPatientExchange),
+    mutationFn: mutate(externalAuthApi.oidcPatientExchange),
+  });
+  const { mutateAsync: linkIdentity } = useMutation({
+    mutationFn: mutate(externalAuthApi.oidcLink),
   });
 
   useEffect(() => {
@@ -68,6 +68,7 @@ export default function KeycloakCallback({ principal }: Props) {
 
       const { transaction, code } = resolution;
       const payload = {
+        provider_id: transaction.providerId,
         code,
         code_verifier: transaction.codeVerifier,
         nonce: transaction.nonce,
@@ -75,6 +76,15 @@ export default function KeycloakCallback({ principal }: Props) {
       };
 
       try {
+        // Login and link share this callback URL, because a provider knows one
+        // redirect URI per principal. The transaction says which was intended;
+        // exchanging a link attempt as a login would fail for a subject that
+        // is, by definition, not linked yet.
+        if (transaction.intent === "link") {
+          await linkIdentity(payload);
+          navigate(transaction.destination);
+          return;
+        }
         if (principal === "workforce") {
           const tokens = (await exchangeWorkforce(
             payload,
@@ -85,7 +95,7 @@ export default function KeycloakCallback({ principal }: Props) {
         const { access } = (await exchangePatient(
           payload,
         )) as LoginByOtpResponse;
-        const session = sessionFromCareToken(access, { provider: "keycloak" });
+        const session = sessionFromCareToken(access, { provider: "oidc" });
         if (!session) {
           setFailed(true);
           return;
@@ -103,6 +113,7 @@ export default function KeycloakCallback({ principal }: Props) {
     principal,
     exchangePatient,
     exchangeWorkforce,
+    linkIdentity,
     patientLogin,
     workforceSessionLogin,
   ]);

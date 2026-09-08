@@ -149,7 +149,7 @@ export function PatientNavUser() {
   const patientUserContext = usePatientContext();
 
   const patient = patientUserContext?.selectedPatient;
-  // A patient authenticated by email link or Keycloak has no phone number, so
+  // A patient authenticated by email link or OIDC has no phone number, so
   // the sidebar shows whichever contact was actually proven -- masked -- and
   // falls back to a neutral label when the identity carries no contact at all.
   const session = patientUserContext?.tokenData;

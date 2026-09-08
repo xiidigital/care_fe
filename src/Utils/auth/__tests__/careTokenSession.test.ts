@@ -17,16 +17,16 @@ const tokenWith = (claims: Record<string, unknown>) => {
   return `${encode({ alg: "HS256" })}.${encode(claims)}.signature`;
 };
 
-test("a keycloak token yields the resolved patient identity", () => {
+test("an oidc token yields the resolved patient identity", () => {
   const token = tokenWith({
     patient_id: "550e8400-e29b-41d4-a716-446655440000",
-    auth_provider: "keycloak",
+    auth_provider: "oidc",
   });
 
-  const session = sessionFromCareToken(token, { provider: "keycloak" });
+  const session = sessionFromCareToken(token, { provider: "oidc" });
 
   assert.equal(session?.patientId, "550e8400-e29b-41d4-a716-446655440000");
-  assert.equal(session?.provider, "keycloak");
+  assert.equal(session?.provider, "oidc");
   assert.equal(session?.phoneNumber, undefined);
   assert.equal(session?.email, undefined);
 });

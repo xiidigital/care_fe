@@ -31,7 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ForgotPasswordPanel } from "@/components/Auth/ForgotPasswordPanel";
 import PatientLoginMethods from "@/components/Auth/external/PatientLoginMethods";
-import WorkforceKeycloakButton from "@/components/Auth/external/WorkforceKeycloakButton";
+import WorkforceOidcButtons from "@/components/Auth/external/WorkforceOidcButtons";
 import CircularProgress from "@/components/Common/CircularProgress";
 import LanguageSelectorLogin from "@/components/Common/LanguageSelectorLogin";
 
@@ -448,7 +448,7 @@ const Login = (props: LoginProps) => {
                           )}
                         </Button>
 
-                        <WorkforceKeycloakButton disabled={isLoading} />
+                        <WorkforceOidcButtons />
                       </form>
                     ) : (
                       <ForgotPasswordPanel
@@ -559,7 +559,7 @@ const Login = (props: LoginProps) => {
                             )}
                           </Button>
 
-                          <WorkforceKeycloakButton disabled={isLoading} />
+                          <WorkforceOidcButtons />
                         </form>
                       ) : (
                         <ForgotPasswordPanel

@@ -153,10 +153,10 @@ export default function AuthUserProvider({
   };
 
   /**
-   * Store a CARE access/refresh pair obtained through the Keycloak workforce
+   * Store a CARE access/refresh pair obtained through the OIDC workforce
    * exchange. The pair is the existing CARE staff credential, so it enters the
    * same session lifecycle as a password login and loads the same
-   * current-user authorization state. No Keycloak token is retained.
+   * current-user authorization state. No provider token is retained.
    */
   const workforceSessionLogin = async (
     tokens: JwtTokenObtainPair,
