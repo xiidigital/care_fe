@@ -214,5 +214,8 @@
     "public/locale/*.json": [
       "npm run sort-locales"
     ]
+  },
+  "engines": {
+    "node": ">=22.22.1"
   }
 }
