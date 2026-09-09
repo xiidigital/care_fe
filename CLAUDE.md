@@ -265,3 +265,18 @@ npx tsc --noEmit
 # 3. Run related tests (requires backend + build)
 npx playwright test tests/path/to/related/
 ```
+
+## Authentication invariants (ADR-0011)
+
+- **OIDC providers come from the backend**, through
+  `GET /api/v1/auth/providers/` (`@/Utils/auth/useOidcProviders`). Never
+  reintroduce `REACT_KEYCLOAK_*` or any build-time provider list: a build that
+  declares its own can advertise a method the backend does not have.
+- **Never compose an authorization URL.** Use the `authorization_endpoint` the
+  backend supplies. Keycloak's `/protocol/openid-connect/auth` is not Entra
+  ID's `/oauth2/v2.0/authorize`, and hardcoding a path makes CARE a
+  single-vendor client.
+- **`display_name` is operator-supplied text.** Render it as text; never
+  interpolate it into markup or into a URL.
+- The PKCE verifier, state and nonce stay in `sessionStorage`, are single-use,
+  and are never logged.
