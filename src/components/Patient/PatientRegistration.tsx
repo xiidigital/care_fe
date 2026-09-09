@@ -56,6 +56,7 @@ import patientApi from "@/types/emr/patient/patientApi";
 import { TagConfig, TagResource } from "@/types/emr/tagConfig/tagConfig";
 import useTagConfigs from "@/types/emr/tagConfig/useTagConfig";
 import { FacilityRead } from "@/types/facility/facility";
+import { Organization } from "@/types/organization/organization";
 import { PatientIdentifierConfig } from "@/types/patient/patientIdentifierConfig/patientIdentifierConfig";
 import { ShortcutBadge } from "@/Utils/keyboardShortcutComponents";
 import { getPostalCodePresentation } from "@/Utils/postalCode";

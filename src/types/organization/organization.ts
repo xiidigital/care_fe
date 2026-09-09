@@ -56,6 +56,18 @@ export interface Organization {
   updated_at: string;
   metadata: Metadata | null;
   geography?: GeographyContext;
+  /**
+   * The geography the organization is filed under, as ids.
+   *
+   * `geography` above is the resolved, display-ready view; these are the raw
+   * ids the write API takes back, so an edit form can round-trip an
+   * organization without re-deriving them. `OrganizationReadSpec` serialises
+   * all four explicitly, and any of them may be null.
+   */
+  country_id?: number | null;
+  region_id?: number | null;
+  subregion_id?: number | null;
+  city_id?: number | null;
   permissions: string[];
   managing_organizations?: OrganizationParent[];
 }

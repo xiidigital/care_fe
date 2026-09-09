@@ -91,10 +91,11 @@ export default function AdminOrganizationFormSheet({
         name: org.name || "",
         description: org.description || "",
         org_type: org.org_type as OrgType,
-        country_id: org.country_id,
-        region_id: org.region_id,
-        subregion_id: org.subregion_id,
-        city_id: org.city_id,
+        // The API returns null for an unset level; the form field is optional.
+        country_id: org.country_id ?? undefined,
+        region_id: org.region_id ?? undefined,
+        subregion_id: org.subregion_id ?? undefined,
+        city_id: org.city_id ?? undefined,
       });
     } else if (!isEditMode && open) {
       form.reset({

@@ -692,17 +692,22 @@ const getSearchOptions = (
 ) => {
   // The patient's primary phone number is always searchable. Additional
   // identifier configurations are optional facility customizations.
-  return [
-    {
-      key: PHONE_NUMBER_SEARCH_KEY,
-      type: "phone" as const,
-      placeholder: t("search_by_phone_number"),
-      value:
-        searchIdentifier.config === PHONE_NUMBER_SEARCH_KEY
-          ? (searchIdentifier.value ?? "")
-          : "",
-      display: t("phone_number"),
-    },
+  //
+  // The phone entry is built in its final shape and is deliberately not passed
+  // through the mapping below: it carries no identifier config, so reading
+  // `config.system` off it throws.
+  const phoneOption = {
+    key: PHONE_NUMBER_SEARCH_KEY,
+    type: "phone" as const,
+    placeholder: t("search_by_phone_number"),
+    value:
+      searchIdentifier.config === PHONE_NUMBER_SEARCH_KEY
+        ? (searchIdentifier.value ?? "")
+        : "",
+    display: t("phone_number"),
+  };
+
+  const searchableConfigs = [
     // Auto-maintained configs but not phone number configs
     ...configs.filter(
       ({ config }) =>
@@ -711,17 +716,22 @@ const getSearchOptions = (
     ),
     // Non-auto-maintained configs
     ...configs.filter((c) => !c.config.auto_maintained),
-  ].map((c) => ({
-    key: c.id,
-    type:
-      c.config.system === careConfig.phoneNumberConfigSystem
-        ? ("phone" as const)
-        : ("text" as const),
-    placeholder: t("search_by_identifier", { name: c.config.display }),
-    value:
-      searchIdentifier.config === c.id ? (searchIdentifier.value ?? "") : "",
-    display: c.config.display,
-  }));
+  ];
+
+  return [
+    phoneOption,
+    ...searchableConfigs.map((c) => ({
+      key: c.id,
+      type:
+        c.config.system === careConfig.phoneNumberConfigSystem
+          ? ("phone" as const)
+          : ("text" as const),
+      placeholder: t("search_by_identifier", { name: c.config.display }),
+      value:
+        searchIdentifier.config === c.id ? (searchIdentifier.value ?? "") : "",
+      display: c.config.display,
+    })),
+  ];
 };
 
 const getEncounterSearchOptions = (
@@ -748,9 +758,10 @@ const getEncounterSearchOptions = (
   },
 ];
 
-const getPhoneNumberFromIdentifierSearch = (
-  identifierSearch: { config?: string; value?: string },
-) => {
+const getPhoneNumberFromIdentifierSearch = (identifierSearch: {
+  config?: string;
+  value?: string;
+}) => {
   if (identifierSearch.config === PHONE_NUMBER_SEARCH_KEY) {
     return identifierSearch.value;
   }
@@ -770,8 +781,7 @@ function AddPatientButton({
   const { t } = useTranslation();
 
   const phoneNumber =
-    identifierSearch &&
-    getPhoneNumberFromIdentifierSearch(identifierSearch);
+    identifierSearch && getPhoneNumberFromIdentifierSearch(identifierSearch);
 
   return (
     <Button
